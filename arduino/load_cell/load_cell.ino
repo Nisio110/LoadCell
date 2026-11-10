@@ -2,7 +2,8 @@
 #include "constants.h"
 
 
-int massGrams{0};
+int offsetMassGrams{0};
+int actualMassGrams{0};
 int voltsmV{0};
 int offsetDU{0};
 int adcVal{0};
@@ -27,15 +28,15 @@ void serialMonitor(int period){
   printReading("ADC", adcVal, "");
   Serial.print(", ");
 
-  printReading("Weight", massGrams, "g");
+  printReading("Weight", offsetMassGrams, "g");
   Serial.println();
 
-  delay(period); // polling rate
+  delay(period);
 }
 
 void serialPlotter(int period){
-  Serial.println(massGrams);
-  delay(period); // polling rate
+  Serial.println(offsetMassGrams);
+  delay(period);
 }
 
 
@@ -74,15 +75,16 @@ void loop() {
     printButtonPressed("Reset");
     resetButtonPressed = false; 
   }
-
+  
   adcVal    = analogRead(adcPin);
-  massGrams = round(gPerDU  * (adcVal + offsetDU));
+  offsetMassGrams = round(gPerDU  * (adcVal + offsetDU));
+  actualMassGrams = round(gPerDU * adcVal);
   voltsmV   = round(mVPerDU *  adcVal);
 
-  if (massGrams > weightLimitGrams)
-    printError("Weight exceeds the limit!");
+  if (actualMassGrams > weightLimitGrams)
+    printError("Actual weight exceeds the limit!");
   else{
-    int monitorPeriodMs = 2000;
+    int monitorPeriodMs = 1500;
     int plotPeriodMs = 100;
     PLOT ? serialPlotter(plotPeriodMs) : serialMonitor(monitorPeriodMs);
   }
