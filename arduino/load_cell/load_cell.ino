@@ -7,6 +7,7 @@ int voltsmV{0};
 int offsetDU{0};
 int adcVal{0};
 int freeMem{0};
+int calibrationFactor = 0;
 
 bool zeroButtonPressed{0};
 bool resetButtonPressed{0};
@@ -46,7 +47,7 @@ void zeroWeightISR(){
 }
 
 void resetWeightISR(){
-  offsetDU = 0;
+  calibrationFactor = round((adcVal - offsetDU)/upperCalibrationWeight);
   resetButtonPressed = true;
   delay(debounceMs);
   
@@ -79,11 +80,19 @@ void loop() {
   massGrams = round(gPerDU  * (adcVal + offsetDU));
   voltsmV   = round(mVPerDU *  adcVal);
 
-  if (massGrams > weightLimitGrams)
-    printError("Weight exceeds the limit!");
+  if (!calibrationFactor) {
+    massGrams = 0;
+    printError("Calibration not performed");
+  }
   else{
-    int monitorPeriodMs = 2000;
-    int plotPeriodMs = 100;
-    PLOT ? serialPlotter(plotPeriodMs) : serialMonitor(monitorPeriodMs);
+    massGrams = round((gPerDU  * (adcVal + offsetDU))/calibrationFactor);
+  
+    if (massGrams > weightLimitGrams)
+      printError("Weight exceeds the limit!");
+    else{
+      int monitorPeriodMs = 2000;
+      int plotPeriodMs = 100;
+      PLOT ? serialPlotter(plotPeriodMs) : serialMonitor(monitorPeriodMs);
+    }
   }
 }
