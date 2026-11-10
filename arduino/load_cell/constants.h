@@ -12,6 +12,6 @@ constexpr int upperCalibrationWeight = 1009;
 constexpr float gPerDU = 1.063849; // g/DU
 constexpr float mVPerDU = 4.888; // mV/DU
 constexpr int weightLimitGrams = 1100;
-constexpr int debounceMs = 100; // button debounce time
+constexpr int debounceMs = 50; // button debounce time
 
 #endif
