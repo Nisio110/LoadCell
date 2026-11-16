@@ -11,12 +11,12 @@ int freeMem{0};
 int calibrationFactor = 0;
 
 bool zeroButtonPressed{0};
-bool resetButtonPressed{0};
+bool calibrationButtonPressed{0};
 
 void serialMonitor(int period);
 void serialPlotter(int period);
 void zeroWeightISR();
-void resetWeightISR();
+void calibrationISR();
 
 void serialMonitor(int period){
   Serial.print(ANSI_PURPLE);
@@ -47,11 +47,10 @@ void zeroWeightISR(){
   delay(debounceMs);
 }
 
-void resetWeightISR(){
-  calibrationFactor = round((adcVal - offsetDU)/upperCalibrationWeight);
-  resetButtonPressed = true;
+void calibrationISR(){
+  gPerDU = (float)CALIBRATION_WEIGHT/(adcVal+offsetDU);
+  calibrationButtonPressed = true;
   delay(debounceMs);
-  
 }
 
 
@@ -59,9 +58,9 @@ void setup() {
   // put your setup code here, to run once:
   Serial.begin(9600);
   pinMode(zeroPin, INPUT_PULLUP);
-  pinMode(resetPin, INPUT_PULLUP);
+  pinMode(calibrationPin, INPUT_PULLUP);
   attachInterrupt(digitalPinToInterrupt(zeroPin), zeroWeightISR, FALLING);
-  attachInterrupt(digitalPinToInterrupt(resetPin), resetWeightISR, FALLING);
+  attachInterrupt(digitalPinToInterrupt(calibrationPin), calibrationISR, FALLING);
 }
 
 
@@ -72,9 +71,14 @@ void loop() {
     zeroButtonPressed = false;
     printButtonPressed("Zero"); 
   }
-  else if (resetButtonPressed){ 
-    printButtonPressed("Reset");
-    resetButtonPressed = false; 
+  else if (calibrationButtonPressed){ 
+    printButtonPressed("Calibration");
+    Serial.print("[ INFO ] ");
+    Serial.print("Calibrating - I hope you put ");
+    Serial.print(CALIBRATION_WEIGHT);
+    Serial.print(" on the scale........");
+    Serial.println();
+    calibrationButtonPressed = false; 
   }
   
   adcVal    = analogRead(adcPin);
@@ -82,19 +86,11 @@ void loop() {
   actualMassGrams = round(gPerDU * adcVal);
   voltsmV   = round(mVPerDU *  adcVal);
 
-  if (!calibrationFactor) {
-    massGrams = 0;
-    printError("Calibration not performed");
-  }
+  if (actualMassGrams > weightLimitGrams)
+    printError("Weight exceeds the limit!");
   else{
-    massGrams = round((gPerDU  * (adcVal + offsetDU))/calibrationFactor);
-  
-    if (massGrams > weightLimitGrams)
-      printError("Weight exceeds the limit!");
-    else{
-      int monitorPeriodMs = 2000;
-      int plotPeriodMs = 100;
-      PLOT ? serialPlotter(plotPeriodMs) : serialMonitor(monitorPeriodMs);
-    }
+    int monitorPeriodMs = 2000;
+    int plotPeriodMs = 100;
+    PLOT ? serialPlotter(plotPeriodMs) : serialMonitor(monitorPeriodMs);
   }
 }
